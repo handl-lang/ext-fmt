@@ -24,22 +24,7 @@ serde_json = "1"
 # ADR-0128 §Resolution: local development resolves sibling-repo deps from
 # sibling checkouts; without the checkouts (or this block), the git sources
 # are used. Same dev-link pattern as the `lib-*` repos.
-[patch."https://github.com/handl-lang/kernel"]
-handl-ext = { path = "../kernel/crates/handl-ext" }
-handl-language = { path = "../kernel/crates/handl-language" }
-handl-value = { path = "../kernel/crates/handl-value" }
 
-[patch."https://github.com/handl-lang/lang"]
-handl-kit-data-canonical = { path = "../lang/crates/handl-kit-data-canonical" }
-
-[patch."https://github.com/handl-lang/platform"]
-handl-kit-arrow-lower = { path = "../platform/crates/handl-kit-arrow-lower" }
-handl-kit-data = { path = "../platform/crates/handl-kit-data" }
-handl-platform = { path = "../platform/crates/platform" }
-handl-plugin-ext-diag = { path = "../platform/crates/plugin-ext-diag" }
-handl-plugin-ext-fmt = { path = "../platform/crates/plugin-ext-fmt" }
-handl-plugin-ext-detect = { path = "../platform/crates/plugin-ext-detect" }
-handl-runtime = { path = "../platform/crates/handl-runtime" }
 
 [profile.dev]
 opt-level = 1
@@ -70,3 +55,20 @@ hnl-engine-transform-rewrite = { path = "../engine-transform-rewrite" }
 
 [patch."https://github.com/handl-lang/engine-typecheck"]
 hnl-engine-typecheck = { path = "../engine-typecheck" }
+
+[patch."https://github.com/handl-lang/kernel"]
+handl-ext = { path = "../kernel/crates/handl-ext" }
+handl-language = { path = "../kernel/crates/handl-language" }
+handl-value = { path = "../kernel/crates/handl-value" }
+
+[patch."https://github.com/handl-lang/lang"]
+handl-kit-data-canonical = { path = "../lang/crates/handl-kit-data-canonical" }
+
+[patch."https://github.com/handl-lang/platform"]
+handl-kit-arrow-lower = { path = "../platform/crates/handl-kit-arrow-lower" }
+handl-kit-data = { path = "../platform/crates/handl-kit-data" }
+handl-platform = { path = "../platform/crates/platform" }
+handl-plugin-ext-detect = { path = "../platform/crates/plugin-ext-detect" }
+handl-plugin-ext-diag = { path = "../platform/crates/plugin-ext-diag" }
+handl-plugin-ext-fmt = { path = "../platform/crates/plugin-ext-fmt" }
+handl-runtime = { path = "../platform/crates/handl-runtime" }
