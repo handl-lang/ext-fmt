@@ -17,7 +17,7 @@ handl-language = { git = "https://github.com/handl-lang/kernel", branch = "main"
 handl-platform = { git = "https://github.com/handl-lang/platform", branch = "main" }
 handl-plugin-ext-diag = { git = "https://github.com/handl-lang/platform", branch = "main" }
 handl-plugin-ext-fmt = { git = "https://github.com/handl-lang/platform", branch = "main" }
-handl-plugin-ext-refinement = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-plugin-ext-detect = { git = "https://github.com/handl-lang/platform", branch = "main" }
 handl-kit-data-canonical = { git = "https://github.com/handl-lang/lang", branch = "main" }
 serde_json = "1"
 
@@ -33,16 +33,11 @@ plugin-engine = { path = "../kernel/crates/plugin-engine" }
 [patch."https://github.com/handl-lang/lang"]
 handl-kit-data-canonical = { path = "../lang/crates/handl-kit-data-canonical" }
 
-[patch."https://github.com/handl-lang/stdlib"]
-handl-plugin-lib-char-native = { path = "../stdlib/modules/char-native" }
-
 [patch."https://github.com/handl-lang/platform"]
 handl-kit-arrow-lower = { path = "../platform/crates/handl-kit-arrow-lower" }
 handl-kit-data = { path = "../platform/crates/handl-kit-data" }
 handl-platform = { path = "../platform/crates/platform" }
 handl-plugin-engine-exec = { path = "../platform/crates/plugin-engine-exec" }
-handl-plugin-engine-exec-bytecode = { path = "../platform/crates/plugin-engine-exec-bytecode" }
-handl-plugin-engine-exec-tree-walk = { path = "../platform/crates/plugin-engine-exec-tree-walk" }
 handl-plugin-engine-fmt = { path = "../platform/crates/plugin-engine-fmt" }
 handl-plugin-engine-lex-pattern = { path = "../platform/crates/plugin-engine-lex-pattern" }
 handl-plugin-engine-parse = { path = "../platform/crates/plugin-engine-parse" }
@@ -52,16 +47,8 @@ handl-plugin-engine-transform-rewrite = { path = "../platform/crates/plugin-engi
 handl-plugin-engine-typecheck = { path = "../platform/crates/plugin-engine-typecheck" }
 handl-plugin-ext-diag = { path = "../platform/crates/plugin-ext-diag" }
 handl-plugin-ext-fmt = { path = "../platform/crates/plugin-ext-fmt" }
-handl-plugin-ext-refinement = { path = "../platform/crates/plugin-ext-refinement" }
-handl-plugin-lib-handl = { path = "../platform/crates/plugin-lib-handl" }
-handl-plugin-module = { path = "../platform/crates/plugin-module" }
+handl-plugin-ext-detect = { path = "../platform/crates/plugin-ext-detect" }
 handl-runtime = { path = "../platform/crates/handl-runtime" }
-
-[patch."https://github.com/handl-lang/lib-dedent"]
-handl-lib-dedent = { path = "../lib-dedent" }
-
-[patch."https://github.com/handl-lang/lib-str-handl"]
-handl-lib-str-handl = { path = "../lib-str-handl" }
 
 [profile.dev]
 opt-level = 1

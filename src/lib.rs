@@ -20,7 +20,7 @@ use handl_ext::{ExtRequest, ExtResponse, ExtensionManifest};
 use handl_language::Language;
 use handl_platform::{CapabilityRequest, DefaultHost};
 use handl_plugin_ext_diag::render_diagnostic;
-use handl_plugin_ext_refinement::{Dialect, detect_dialect};
+use handl_plugin_ext_detect::{Dialect, detect_dialect};
 use serde_json::json;
 
 handl_ext::export!(
@@ -285,11 +285,19 @@ mod tests {
     use super::*;
     use std::ffi::CStr;
 
+    /// A unique temp dir per test — the tests run in parallel and share the
+    /// process id, so a pid-only name lets one test's `remove_dir_all` pull
+    /// another's fixture out from under it.
+    fn tmpdir(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("hnl-ext-fmt-{tag}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
     /// Call `run` directly — the same path `handl_ext_dispatch` reaches.
     #[test]
     fn formats_a_file_to_stdout() {
-        let dir = std::env::temp_dir().join(format!("hnl-ext-fmt-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = tmpdir("stdout");
         let file = dir.join("dirty.hnl");
         std::fs::write(&file, "x   =   1;").unwrap();
 
@@ -301,8 +309,7 @@ mod tests {
 
     #[test]
     fn check_reports_not_canonical_with_code_1() {
-        let dir = std::env::temp_dir().join(format!("hnl-ext-fmt-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = tmpdir("check");
         let file = dir.join("dirty.hnl");
         std::fs::write(&file, "x   =   1;").unwrap();
 
@@ -317,8 +324,7 @@ mod tests {
 
     #[test]
     fn write_rewrites_the_file() {
-        let dir = std::env::temp_dir().join(format!("hnl-ext-fmt-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = tmpdir("write");
         let file = dir.join("dirty.hnl");
         std::fs::write(&file, "x   =   1;").unwrap();
 
