@@ -1,0 +1,67 @@
+[package]
+name = "hnl-ext-fmt"
+version = "0.1.0"
+edition = "2024"
+description = "`hnl fmt` — the canonical formatter as a dynamic `hnl` extension (ADR-0149)."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/handl-lang/ext-fmt"
+
+[lib]
+# `cdylib` is the shipped artifact (`libhnl_ext_fmt.{so,dylib,dll}`);
+# `rlib` keeps `cargo test` statically linked (ADR-0149 §Consequences).
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+handl-ext = { git = "https://github.com/handl-lang/kernel", branch = "main" }
+handl-language = { git = "https://github.com/handl-lang/kernel", branch = "main" }
+handl-platform = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-plugin-ext-diag = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-plugin-ext-fmt = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-plugin-ext-refinement = { git = "https://github.com/handl-lang/platform", branch = "main" }
+handl-kit-data-canonical = { git = "https://github.com/handl-lang/lang", branch = "main" }
+serde_json = "1"
+
+# ADR-0128 §Resolution: local development resolves sibling-repo deps from
+# sibling checkouts; without the checkouts (or this block), the git sources
+# are used. Same dev-link pattern as the `lib-*` repos.
+[patch."https://github.com/handl-lang/kernel"]
+handl-ext = { path = "../kernel/crates/handl-ext" }
+handl-language = { path = "../kernel/crates/handl-language" }
+handl-value = { path = "../kernel/crates/handl-value" }
+plugin-engine = { path = "../kernel/crates/plugin-engine" }
+
+[patch."https://github.com/handl-lang/lang"]
+handl-kit-data-canonical = { path = "../lang/crates/handl-kit-data-canonical" }
+
+[patch."https://github.com/handl-lang/stdlib"]
+handl-plugin-lib-char-native = { path = "../stdlib/modules/char-native" }
+
+[patch."https://github.com/handl-lang/platform"]
+handl-kit-arrow-lower = { path = "../platform/crates/handl-kit-arrow-lower" }
+handl-kit-data = { path = "../platform/crates/handl-kit-data" }
+handl-platform = { path = "../platform/crates/platform" }
+handl-plugin-engine-exec = { path = "../platform/crates/plugin-engine-exec" }
+handl-plugin-engine-exec-bytecode = { path = "../platform/crates/plugin-engine-exec-bytecode" }
+handl-plugin-engine-exec-tree-walk = { path = "../platform/crates/plugin-engine-exec-tree-walk" }
+handl-plugin-engine-fmt = { path = "../platform/crates/plugin-engine-fmt" }
+handl-plugin-engine-lex-pattern = { path = "../platform/crates/plugin-engine-lex-pattern" }
+handl-plugin-engine-parse = { path = "../platform/crates/plugin-engine-parse" }
+handl-plugin-engine-parse-pratt = { path = "../platform/crates/plugin-engine-parse-pratt" }
+handl-plugin-engine-transform = { path = "../platform/crates/plugin-engine-transform" }
+handl-plugin-engine-transform-rewrite = { path = "../platform/crates/plugin-engine-transform-rewrite" }
+handl-plugin-engine-typecheck = { path = "../platform/crates/plugin-engine-typecheck" }
+handl-plugin-ext-diag = { path = "../platform/crates/plugin-ext-diag" }
+handl-plugin-ext-fmt = { path = "../platform/crates/plugin-ext-fmt" }
+handl-plugin-ext-refinement = { path = "../platform/crates/plugin-ext-refinement" }
+handl-plugin-lib-handl = { path = "../platform/crates/plugin-lib-handl" }
+handl-plugin-module = { path = "../platform/crates/plugin-module" }
+handl-runtime = { path = "../platform/crates/handl-runtime" }
+
+[patch."https://github.com/handl-lang/lib-dedent"]
+handl-lib-dedent = { path = "../lib-dedent" }
+
+[patch."https://github.com/handl-lang/lib-str-handl"]
+handl-lib-str-handl = { path = "../lib-str-handl" }
+
+[profile.dev]
+opt-level = 1
