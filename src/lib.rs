@@ -10,7 +10,7 @@
 //! Internally the extension is a *host of plugins* like any other
 //! (ADR-0149 §Consequences): a `DefaultHost` running the `fmt` capability
 //! of [`FmtPlugin`], with the canonical [`Language`] injected from
-//! `handl-kit-data-canonical` (the same data the old host's kit supplied).
+//! `handl-kit-data-prelude` (the same data the old host's kit supplied).
 
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
@@ -167,7 +167,7 @@ fn canonical_lang() -> Arc<Language> {
     static LANG: std::sync::OnceLock<Arc<Language>> = std::sync::OnceLock::new();
     LANG.get_or_init(|| {
         Arc::new(
-            handl_kit_data_canonical::language_from_yaml()
+            handl_kit_data_prelude::language_from_yaml()
                 .expect("canonical language must assemble"),
         )
     })

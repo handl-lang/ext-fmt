@@ -18,7 +18,7 @@ handl-platform = { git = "https://github.com/handl-lang/host", branch = "main" }
 handl-plugin-ext-diag = { git = "https://github.com/handl-lang/host", branch = "main" }
 handl-plugin-ext-fmt = { git = "https://github.com/handl-lang/host", branch = "main" }
 handl-plugin-ext-detect = { git = "https://github.com/handl-lang/host", branch = "main" }
-handl-kit-data-canonical = { git = "https://github.com/handl-lang/kit-data-canonical", branch = "main" }
+handl-kit-data-prelude = { git = "https://github.com/handl-lang/kit-data-prelude", branch = "main" }
 serde_json = "1"
 
 # ADR-0128 §Resolution: local development resolves sibling-repo deps from
@@ -61,8 +61,8 @@ handl-ext = { path = "../kernel/crates/handl-ext" }
 handl-language = { path = "../kernel/crates/handl-language" }
 handl-value = { path = "../kernel/crates/handl-value" }
 
-[patch."https://github.com/handl-lang/kit-data-canonical"]
-handl-kit-data-canonical = { path = "../kit-data-canonical/crates/handl-kit-data-canonical" }
+[patch."https://github.com/handl-lang/kit-data-prelude"]
+handl-kit-data-prelude = { path = "../kit-data-prelude/crates/handl-kit-data-prelude" }
 
 [patch."https://github.com/handl-lang/host"]
 handl-kit-arrow-lower = { path = "../host/crates/handl-kit-arrow-lower" }
