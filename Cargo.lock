@@ -227,6 +227,7 @@ name = "hnl-engine-transform-rewrite"
 version = "0.1.0"
 dependencies = [
  "handl-language",
+ "handl-value",
  "hnl-engine-transform",
  "serde_json",
 ]
