@@ -1,15 +1,32 @@
 # ext-fmt
 
-`hnl fmt` as a dynamic extension — `libhnl_ext_fmt.{so,dylib,dll}`
-(ADR-0149).
+`hnl-ext-fmt` — `hnl fmt` as a dynamic `hnl` extension.
 
-The formatter logic lives in `handl-plugin-ext-fmt` (platform); this repo
-is the packaging: `hnl-ext-fmt` exports the ADR-0149 ABI
-(`handl_ext_manifest` / `handl_ext_dispatch` / `handl_ext_free`) and
-implements the `fmt [--check] [--write] [paths...]` command surface with
-the same semantics the old built-in `hnl fmt` had (exit 0/1/2, `not
-canonical` reporting, `--write` atomic rewrite, stdin when no paths,
-dialect-file skip).
+An `ext-*` crate: a `libhnl_ext_fmt.{so,dylib,dll}` shared library for the
+dumb `hnl` host. The formatter logic lives in `handl-plugin-ext-fmt`
+(platform); this repo is the packaging — `hnl-ext-fmt` exports the extension
+ABI (`handl_ext_manifest` / `handl_ext_dispatch` / `handl_ext_free`) and
+implements the `fmt [--check] [--write] [paths...]` command surface.
+
+## Commands
+
+```text
+hnl fmt [--check] [--write] [paths...]
+```
+
+Reads stdin when no paths are given; skips dialect files; `--write` rewrites
+files atomically. Exit codes: `0` ok, `1` not canonical / write errors,
+`2` usage/read errors.
+
+## Development
+
+```bash
+cargo xtask gate        # fmt --check → clippy -D warnings → test → doc
+```
+
+`cargo xtask` wraps the repo's `xtask/` crate (`fmt`, `clippy`, `test`, `doc`,
+`check`, `gate`); `ci.sh` is the gate entry. The crate builds a `cdylib` +
+`rlib`; `cargo test` links the `rlib` statically.
 
 ```bash
 cargo build                        # target/debug/libhnl_ext_fmt.so
@@ -20,14 +37,8 @@ HANDL_EXT_DIR=$PWD/target/debug hnl fmt --check file.hnl
 ```
 
 Platform/kernel/lang crates are git dependencies (`branch = "main"`); the
-workspace-root `[patch]` tables resolve them from sibling checkouts for
-local development. To build without the remotes, rewrite the git URLs to
-the local clones (same recipe as the other extracted repos):
+`[patch]` tables resolve them from sibling checkouts for local development.
 
-```bash
-CARGO_NET_GIT_FETCH_WITH_CLI=true \
-GIT_CONFIG_COUNT=1 \
-GIT_CONFIG_KEY_0='url.file:///home/luis/GitHub/handl-lang/.insteadOf' \
-GIT_CONFIG_VALUE_0='https://github.com/handl-lang/' \
-cargo build
-```
+## License
+
+MIT OR Apache-2.0.
