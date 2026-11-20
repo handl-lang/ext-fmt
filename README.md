@@ -41,4 +41,4 @@ Platform/kernel/lang crates are git dependencies (`branch = "main"`); the
 
 ## License
 
-MIT OR Apache-2.0.
+MIT.
