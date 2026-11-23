@@ -39,7 +39,7 @@ opt-level = 1
 
 # Sibling checkouts for the PL-004 desired-state deps (same convention
 # as ext-codegen/ext-codemod): the git deps resolve to the local
-# `../host` / `../engine-*` trees.
+# `../host` / `../tool-*`/`../exec-*` trees.
 [patch."https://github.com/handl-lang/host"]
 handl-plugin-codegen = { path = "../host/crates/plugin-codegen" }
 handl-plugin-ext-fmt = { path = "../host/crates/plugin-ext-fmt" }
