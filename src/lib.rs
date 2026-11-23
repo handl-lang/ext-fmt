@@ -9,7 +9,7 @@
 //!
 //! Internally the extension is a *host of plugins* like any other
 //! (ADR-0149 §Consequences): a `DefaultHost` running the `fmt` capability
-//! of [`FmtPlugin`], with the canonical [`Language`] injected from
+//! of [`handl_plugin_ext_fmt::FmtPlugin`], with the canonical [`Language`] injected from
 //! `handl-kit-data-prelude` (the same data the old host's kit supplied).
 
 use std::io::Read as _;
@@ -19,14 +19,17 @@ use std::sync::Arc;
 use handl_ext::{ExtRequest, ExtResponse, ExtensionManifest};
 use handl_language::Language;
 use handl_platform::{CapabilityRequest, DefaultHost};
-use handl_plugin_ext_diag::render_diagnostic;
 use handl_plugin_ext_detect::{Dialect, detect_dialect};
+use handl_plugin_ext_diag::render_diagnostic;
 use serde_json::json;
 
 handl_ext::export!(
     ExtensionManifest::new("fmt")
         .version(env!("CARGO_PKG_VERSION"))
-        .command("fmt", "fmt [--check] [--write] [--language <name>] [paths...]"),
+        .command(
+            "fmt",
+            "fmt [--check] [--write] [--language <name>] [paths...]"
+        ),
     dispatch
 );
 
@@ -90,12 +93,12 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
     if check && write {
         return err("fmt: --check and --write are mutually exclusive\n");
     }
-    if let Some(lang) = language {
-        if lang != "canonical" {
-            return err(
-                "custom languages are not yet supported by the CLI; use the programmatic `_with_language` APIs\n",
-            );
-        }
+    if let Some(lang) = language
+        && lang != "canonical"
+    {
+        return err(
+            "custom languages are not yet supported by the CLI; use the programmatic `_with_language` APIs\n",
+        );
     }
 
     // One host for the whole command — the same capability path a
@@ -113,7 +116,16 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
         if std::io::stdin().read_to_string(&mut src).is_err() {
             return err("fmt: failed to read stdin\n");
         }
-        if fmt_one(&mut host, &src, "<stdin>", Path::new("<stdin>"), check, write, &mut out) == 2 {
+        if fmt_one(
+            &mut host,
+            &src,
+            "<stdin>",
+            Path::new("<stdin>"),
+            check,
+            write,
+            &mut out,
+        ) == 2
+        {
             return ExtResponse {
                 code: 2,
                 stdout: out.stdout,
@@ -152,13 +164,13 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
 /// A host with the `fmt` plugin registered — the extension consumes the
 /// same `DefaultHost`/`CapabilityRequest` machinery the built-in command
 /// did; only the packaging changed (ADR-0149 §Consequences).
+#[allow(clippy::result_large_err)]
 fn tooling_host() -> Result<DefaultHost, handl_platform::PlatformError> {
     let mut host = DefaultHost::new();
     host.register_plugin(handl_plugin_ext_fmt::FmtPlugin::new(canonical_lang()));
     host.load()?;
-    host.resolve_composition().map_err(|e| {
-        handl_platform::PlatformError::Plugin(format!("tooling composition: {e}"))
-    })?;
+    host.resolve_composition()
+        .map_err(|e| handl_platform::PlatformError::Plugin(format!("tooling composition: {e}")))?;
     Ok(host)
 }
 
@@ -167,8 +179,7 @@ fn canonical_lang() -> Arc<Language> {
     static LANG: std::sync::OnceLock<Arc<Language>> = std::sync::OnceLock::new();
     LANG.get_or_init(|| {
         Arc::new(
-            handl_kit_data_prelude::language_from_yaml()
-                .expect("canonical language must assemble"),
+            handl_kit_data_prelude::language_from_yaml().expect("canonical language must assemble"),
         )
     })
     .clone()
@@ -196,7 +207,8 @@ fn fmt_one(
     out: &mut Out,
 ) -> i32 {
     if detect_dialect(src) != Dialect::Canonical {
-        out.stderr.push_str(&format!("skipping dialect file: {path}\n"));
+        out.stderr
+            .push_str(&format!("skipping dialect file: {path}\n"));
         return 0;
     }
 
@@ -248,8 +260,9 @@ fn fmt_one(
             2
         }
         other => {
-            out.stderr
-                .push_str(&format!("fmt: {path}: unexpected capability status {other:?}\n"));
+            out.stderr.push_str(&format!(
+                "fmt: {path}: unexpected capability status {other:?}\n"
+            ));
             2
         }
     }
