@@ -26,11 +26,11 @@ handl-plugin-ext-diag = { git = "https://github.com/handl-lang/host", branch = "
 handl-plugin-ext-fmt = { git = "https://github.com/handl-lang/host", branch = "main" }
 handl-plugin-ext-detect = { git = "https://github.com/handl-lang/host", branch = "main" }
 # PL-004: `hnl fmt`'s file paths run the desired-state pipeline —
-# `hnl-engine-fmt`'s `FmtSource`/`FmtEmitter` registered on
+# `hnl-tool-fmt`'s `FmtSource`/`FmtEmitter` registered on
 # `handl-plugin-codegen`'s `CodegenRegistry` (the same `fmt` target
 # `hnl codegen fmt` resolves), journaled under `.handl/codegen/`.
 handl-plugin-codegen = { git = "https://github.com/handl-lang/host", branch = "main" }
-hnl-engine-fmt = { git = "https://github.com/handl-lang/engine-fmt", branch = "main" }
+hnl-tool-fmt = { git = "https://github.com/handl-lang/tool-fmt", branch = "main" }
 handl-kit-data-prelude = { git = "https://github.com/handl-lang/host", branch = "main" }
 serde_json = "1"
 
@@ -48,11 +48,11 @@ handl-plugin-ext-detect = { path = "../host/crates/plugin-ext-detect" }
 handl-platform = { path = "../host/crates/platform" }
 handl-kit-data-prelude = { path = "../host/crates/handl-kit-data-prelude" }
 
-[patch."https://github.com/handl-lang/engine-codegen"]
-hnl-engine-codegen = { path = "../engine-codegen" }
+[patch."https://github.com/handl-lang/tool-codegen"]
+hnl-tool-codegen = { path = "../tool-codegen" }
 
-[patch."https://github.com/handl-lang/engine-fmt"]
-hnl-engine-fmt = { path = "../engine-fmt" }
+[patch."https://github.com/handl-lang/tool-fmt"]
+hnl-tool-fmt = { path = "../tool-fmt" }
 
-[patch."https://github.com/handl-lang/engine-lex-pattern"]
-hnl-engine-lex-pattern = { path = "../engine-lex-pattern" }
+[patch."https://github.com/handl-lang/tool-lex-pattern"]
+hnl-tool-lex-pattern = { path = "../tool-lex-pattern" }

@@ -1,13 +1,13 @@
 //! `hnl-ext-fmt` — the `fmt` extension for `hnl` (ADR-0149).
 //!
 //! The formatter logic lives in `handl-plugin-ext-fmt` (platform) and
-//! `hnl-engine-fmt`; this crate is the *packaging*: it exports the
+//! `hnl-tool-fmt`; this crate is the *packaging*: it exports the
 //! ADR-0149 ABI (`handl_ext_manifest` / `handl_ext_dispatch` /
 //! `handl_ext_free`) and implements the `hnl fmt [--check] [--write]
 //! [paths...]` command surface.
 //!
 //! PL-004 rewiring: file paths run the **desired-state pipeline** —
-//! `hnl_engine_fmt::register` seats the `"fmt"` source/emitter/target
+//! `hnl_tool_fmt::register` seats the `"fmt"` source/emitter/target
 //! on a [`CodegenRegistry`], so `hnl fmt` resolves the same
 //! `Source → IR → Emitter → Change → Engine` lifecycle `hnl codegen
 //! fmt` does. `--write` applies through [`Engine::apply`] with the
@@ -149,7 +149,7 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
     // The desired-state registry: `hnl fmt` resolves the same `"fmt"`
     // target `hnl codegen fmt` does (PL-004).
     let mut registry = CodegenRegistry::new();
-    hnl_engine_fmt::register(&mut registry);
+    hnl_tool_fmt::register(&mut registry);
     let lang = canonical_lang();
 
     for path in &paths {
