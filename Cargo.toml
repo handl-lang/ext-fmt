@@ -5,9 +5,13 @@ edition = "2024"
 description = "`hnl fmt` — the canonical formatter as a dynamic `hnl` extension (ADR-0149)."
 license = "MIT"
 repository = "https://github.com/handl-lang/ext-fmt"
+homepage = "https://handl-lang.github.io/docs/ext-fmt/"
+documentation = "https://handl-lang.github.io/docs/ext-fmt/reference/"
 readme = "README.md"
 keywords = ["handl", "extension", "cli"]
 categories = ["development-tools"]
+# Git-install only: https://github.com/handl-lang/ext-fmt (no crates.io).
+publish = false
 
 [lib]
 # `cdylib` is the shipped artifact (`libhnl_ext_fmt.{so,dylib,dll}`);
@@ -24,55 +28,5 @@ handl-plugin-ext-detect = { git = "https://github.com/handl-lang/host", branch =
 handl-kit-data-prelude = { git = "https://github.com/handl-lang/kit-data-prelude", branch = "main" }
 serde_json = "1"
 
-# ADR-0128 §Resolution: local development resolves sibling-repo deps from
-# sibling checkouts; without the checkouts (or this block), the git sources
-# are used. Same dev-link pattern as the `lib-*` repos.
-
-
 [profile.dev]
 opt-level = 1
-
-[patch."https://github.com/handl-lang/engine"]
-hnl-engine = { path = "../engine" }
-
-[patch."https://github.com/handl-lang/engine-exec"]
-hnl-engine-exec = { path = "../engine-exec" }
-
-[patch."https://github.com/handl-lang/engine-fmt"]
-hnl-engine-fmt = { path = "../engine-fmt" }
-
-[patch."https://github.com/handl-lang/engine-lex-pattern"]
-hnl-engine-lex-pattern = { path = "../engine-lex-pattern" }
-
-[patch."https://github.com/handl-lang/engine-parse"]
-hnl-engine-parse = { path = "../engine-parse" }
-
-[patch."https://github.com/handl-lang/engine-parse-pratt"]
-hnl-engine-parse-pratt = { path = "../engine-parse-pratt" }
-
-[patch."https://github.com/handl-lang/engine-transform"]
-hnl-engine-transform = { path = "../engine-transform" }
-
-[patch."https://github.com/handl-lang/engine-transform-rewrite"]
-hnl-engine-transform-rewrite = { path = "../engine-transform-rewrite" }
-
-[patch."https://github.com/handl-lang/engine-typecheck"]
-hnl-engine-typecheck = { path = "../engine-typecheck" }
-
-[patch."https://github.com/handl-lang/kernel"]
-handl-calculus = { path = "../kernel/crates/handl-calculus" }
-handl-ext = { path = "../kernel/crates/handl-ext" }
-handl-language = { path = "../kernel/crates/handl-language" }
-handl-value = { path = "../kernel/crates/handl-value" }
-
-[patch."https://github.com/handl-lang/kit-data-prelude"]
-handl-kit-data-prelude = { path = "../kit-data-prelude/crates/handl-kit-data-prelude" }
-
-[patch."https://github.com/handl-lang/host"]
-handl-kit-arrow-lower = { path = "../host/crates/handl-kit-arrow-lower" }
-handl-kit-data = { path = "../host/crates/handl-kit-data" }
-handl-platform = { path = "../host/crates/platform" }
-handl-plugin-ext-detect = { path = "../host/crates/plugin-ext-detect" }
-handl-plugin-ext-diag = { path = "../host/crates/plugin-ext-diag" }
-handl-plugin-ext-fmt = { path = "../host/crates/plugin-ext-fmt" }
-handl-runtime = { path = "../host/crates/handl-runtime" }

@@ -21,12 +21,12 @@ files atomically. Exit codes: `0` ok, `1` not canonical / write errors,
 ## Development
 
 ```bash
-cargo xtask gate        # fmt --check → clippy -D warnings → test → doc
+cargo run --manifest-path xtask/Cargo.toml -- gate   # fmt → clippy → test → doc
 ```
 
-`cargo xtask` wraps the repo's `xtask/` crate (`fmt`, `clippy`, `test`, `doc`,
-`check`, `gate`); `ci.sh` is the gate entry. The crate builds a `cdylib` +
-`rlib`; `cargo test` links the `rlib` statically.
+`xtask/` provides the gate tasks (`fmt`, `clippy`, `test`, `doc`, `check`,
+`gate`); `ci.sh` is the same gate entry for the bupha shell runner. The crate
+builds a `cdylib` + `rlib`; `cargo test` links the `rlib` statically.
 
 ```bash
 cargo build                        # target/debug/libhnl_ext_fmt.so
@@ -36,8 +36,9 @@ HANDL_EXT_DIR=$PWD/target/debug hnl fmt file.hnl
 HANDL_EXT_DIR=$PWD/target/debug hnl fmt --check file.hnl
 ```
 
-Platform/kernel/lang crates are git dependencies (`branch = "main"`); the
-`[patch]` tables resolve them from sibling checkouts for local development.
+Deps are git deps on `branch = "main"`; locally the workspace-root
+`.cargo/config.toml` patches them to sibling checkouts (dev-only, never
+committed).
 
 ## License
 
