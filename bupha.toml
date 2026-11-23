@@ -7,7 +7,7 @@
 
 [[repos]]
 name = "handl-lang/ext-fmt"
-dir = "/home/luis/GitHub/handl-lang/ext-fmt"
+dir = "~/GitHub/handl-lang/ext-fmt"
 branch = "refs/heads/main"
   [repos.runner]
   kind = "script"
