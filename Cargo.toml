@@ -25,8 +25,33 @@ handl-platform = { git = "https://github.com/handl-lang/host", branch = "main" }
 handl-plugin-ext-diag = { git = "https://github.com/handl-lang/host", branch = "main" }
 handl-plugin-ext-fmt = { git = "https://github.com/handl-lang/host", branch = "main" }
 handl-plugin-ext-detect = { git = "https://github.com/handl-lang/host", branch = "main" }
+# PL-004: `hnl fmt`'s file paths run the desired-state pipeline —
+# `hnl-engine-fmt`'s `FmtSource`/`FmtEmitter` registered on
+# `handl-plugin-codegen`'s `CodegenRegistry` (the same `fmt` target
+# `hnl codegen fmt` resolves), journaled under `.handl/codegen/`.
+handl-plugin-codegen = { git = "https://github.com/handl-lang/host", branch = "main" }
+hnl-engine-fmt = { git = "https://github.com/handl-lang/engine-fmt", branch = "main" }
 handl-kit-data-prelude = { git = "https://github.com/handl-lang/kit-data-prelude", branch = "main" }
 serde_json = "1"
 
 [profile.dev]
 opt-level = 1
+
+# Sibling checkouts for the PL-004 desired-state deps (same convention
+# as ext-codegen/ext-codemod): the git deps resolve to the local
+# `../host` / `../engine-*` trees.
+[patch."https://github.com/handl-lang/host"]
+handl-plugin-codegen = { path = "../host/crates/plugin-codegen" }
+handl-plugin-ext-fmt = { path = "../host/crates/plugin-ext-fmt" }
+handl-plugin-ext-diag = { path = "../host/crates/plugin-ext-diag" }
+handl-plugin-ext-detect = { path = "../host/crates/plugin-ext-detect" }
+handl-platform = { path = "../host/crates/platform" }
+
+[patch."https://github.com/handl-lang/engine-codegen"]
+hnl-engine-codegen = { path = "../engine-codegen" }
+
+[patch."https://github.com/handl-lang/engine-fmt"]
+hnl-engine-fmt = { path = "../engine-fmt" }
+
+[patch."https://github.com/handl-lang/engine-lex-pattern"]
+hnl-engine-lex-pattern = { path = "../engine-lex-pattern" }

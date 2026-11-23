@@ -1,16 +1,29 @@
 //! `hnl-ext-fmt` — the `fmt` extension for `hnl` (ADR-0149).
 //!
-//! The formatter logic lives in `handl-plugin-ext-fmt` (platform); this
-//! crate is the *packaging*: it exports the ADR-0149 ABI
-//! (`handl_ext_manifest` / `handl_ext_dispatch` / `handl_ext_free`) and
-//! implements the `hnl fmt [--check] [--write] [paths...]` command
-//! surface — byte-for-byte the semantics the built-in `fmt` arm had before
-//! the host went dumb.
+//! The formatter logic lives in `handl-plugin-ext-fmt` (platform) and
+//! `hnl-engine-fmt`; this crate is the *packaging*: it exports the
+//! ADR-0149 ABI (`handl_ext_manifest` / `handl_ext_dispatch` /
+//! `handl_ext_free`) and implements the `hnl fmt [--check] [--write]
+//! [paths...]` command surface.
 //!
-//! Internally the extension is a *host of plugins* like any other
-//! (ADR-0149 §Consequences): a `DefaultHost` running the `fmt` capability
-//! of [`handl_plugin_ext_fmt::FmtPlugin`], with the canonical [`Language`] injected from
-//! `handl-kit-data-prelude` (the same data the old host's kit supplied).
+//! PL-004 rewiring: file paths run the **desired-state pipeline** —
+//! `hnl_engine_fmt::register` seats the `"fmt"` source/emitter/target
+//! on a [`CodegenRegistry`], so `hnl fmt` resolves the same
+//! `Source → IR → Emitter → Change → Engine` lifecycle `hnl codegen
+//! fmt` does. `--write` applies through [`Engine::apply`] with the
+//! manifest + write-ahead journal under `<root>/.handl/codegen/`
+//! (revertable via `hnl codegen revert`/`Engine::revert`); `--check`
+//! is `Engine::plan` reporting drift; the default mode prints the
+//! materialized formatted bytes without touching the store.
+//!
+//! Stdin has no artifact to journal, so it keeps the capability-JSON
+//! path (`FmtPlugin` over `DefaultHost`) — `--write` on stdin is a
+//! usage error rather than a silent non-write.
+//!
+//! Apply passes `prior = None` deliberately (the codemod precedent):
+//! `hnl fmt` formats files *in place* and does not own an artifact
+//! set, so a per-file run must never plan manifest-owned deletes of
+//! siblings a previous run formatted.
 
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
@@ -19,6 +32,9 @@ use std::sync::Arc;
 use handl_ext::{ExtRequest, ExtResponse, ExtensionManifest};
 use handl_language::Language;
 use handl_platform::{CapabilityRequest, DefaultHost};
+use handl_plugin_codegen::{
+    ApplyOptions, CodegenRegistry, CodegenRequest, CodegenTargetError, Engine, FsStore, RunMeta,
+};
 use handl_plugin_ext_detect::{Dialect, detect_dialect};
 use handl_plugin_ext_diag::render_diagnostic;
 use serde_json::json;
@@ -101,31 +117,26 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
         );
     }
 
-    // One host for the whole command — the same capability path a
-    // third-party consumer uses (ADR-0085 wiring, step 4).
-    let mut host = match tooling_host() {
-        Ok(h) => h,
-        Err(e) => return err(format!("fmt: tooling host unavailable: {e}\n")),
-    };
-
     let mut out = Out::default();
 
     if paths.is_empty() {
-        // Read from stdin.
+        // Stdin has no artifact — the desired-state pipeline is
+        // file-based, so stdin keeps the capability path. `--write`
+        // cannot journal a non-file; refuse rather than silently
+        // printing.
+        if write {
+            return err("fmt: --write requires a file path (stdin has no artifact to journal)\n");
+        }
+        let mut host = match tooling_host() {
+            Ok(h) => h,
+            Err(e) => return err(format!("fmt: tooling host unavailable: {e}\n")),
+        };
         let mut src = String::new();
         if std::io::stdin().read_to_string(&mut src).is_err() {
             return err("fmt: failed to read stdin\n");
         }
-        if fmt_one(
-            &mut host,
-            &src,
-            "<stdin>",
-            Path::new("<stdin>"),
-            check,
-            write,
-            &mut out,
-        ) == 2
-        {
+        let code = fmt_stdin(&mut host, &src, check, &mut out);
+        if code == 2 {
             return ExtResponse {
                 code: 2,
                 stdout: out.stdout,
@@ -134,6 +145,12 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
         }
         return finish(out);
     }
+
+    // The desired-state registry: `hnl fmt` resolves the same `"fmt"`
+    // target `hnl codegen fmt` does (PL-004).
+    let mut registry = CodegenRegistry::new();
+    hnl_engine_fmt::register(&mut registry);
+    let lang = canonical_lang();
 
     for path in &paths {
         let disk = resolve(cwd, path);
@@ -149,7 +166,18 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
                 };
             }
         };
-        if fmt_one(&mut host, &src, path, &disk, check, write, &mut out) == 2 {
+        if fmt_file(
+            &registry,
+            lang.as_ref(),
+            cwd,
+            &disk,
+            &src,
+            path,
+            check,
+            write,
+            &mut out,
+        ) == 2
+        {
             return ExtResponse {
                 code: 2,
                 stdout: out.stdout,
@@ -161,9 +189,9 @@ fn run(args: &[String], cwd: &Path) -> ExtResponse {
     finish(out)
 }
 
-/// A host with the `fmt` plugin registered — the extension consumes the
-/// same `DefaultHost`/`CapabilityRequest` machinery the built-in command
-/// did; only the packaging changed (ADR-0149 §Consequences).
+/// A host with the `fmt` plugin registered — the stdin path consumes
+/// the same `DefaultHost`/`CapabilityRequest` machinery it always did;
+/// only file paths moved to the codegen lifecycle (PL-004).
 #[allow(clippy::result_large_err)]
 fn tooling_host() -> Result<DefaultHost, handl_platform::PlatformError> {
     let mut host = DefaultHost::new();
@@ -195,13 +223,41 @@ fn resolve(cwd: &Path, path: &str) -> PathBuf {
     }
 }
 
-/// Format a single source. Returns 2 on parse/dispatch error (and sets
-/// `out.had_failure` for check failures); otherwise 0.
-fn fmt_one(
-    host: &mut DefaultHost,
+/// The `FsStore` root for `disk` under `cwd`: the cwd when the file
+/// lives beneath it — so the journal/manifest land at
+/// `<cwd>/.handl/codegen/`, the same bookkeeping root `hnl codemod`
+/// and `hnl codegen fmt --output <dir>` use — else the file's own
+/// directory (the artifact ref must be store-relative; an absolute
+/// spec outside the root is a `FmtSource` error).
+fn store_root(cwd: &Path, disk: &Path) -> PathBuf {
+    let canon_disk = disk.canonicalize().unwrap_or_else(|_| disk.to_path_buf());
+    let canon_cwd = cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf());
+    if let Ok(rel) = canon_disk.strip_prefix(&canon_cwd)
+        && !rel.as_os_str().is_empty()
+    {
+        return cwd.to_path_buf();
+    }
+    disk.parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| cwd.to_path_buf())
+}
+
+/// Format one on-disk file through the `"fmt"` codegen target.
+///
+/// `src` is the already-read file text (dialect gate + read-error
+/// parity with the old path); [`FmtSource`] re-reads `spec` itself —
+/// the kernel `Source` owns the file→IR lift.
+///
+/// Returns 2 on usage/read/materialize errors; sets `out.had_failure`
+/// for `--check` drift; otherwise 0.
+#[allow(clippy::too_many_arguments)]
+fn fmt_file(
+    registry: &CodegenRegistry,
+    lang: &Language,
+    cwd: &Path,
+    disk: &Path,
     src: &str,
     path: &str,
-    disk: &Path,
     check: bool,
     write: bool,
     out: &mut Out,
@@ -212,6 +268,99 @@ fn fmt_one(
         return 0;
     }
 
+    let root = store_root(cwd, disk);
+    let request = CodegenRequest {
+        spec: disk,
+        source_url: None,
+        output: &root,
+        target: None,
+        include: None,
+        exclude: None,
+        config: None,
+        emit_spec: None,
+        lang,
+        cache_dir: None,
+    };
+    let changes = match registry.materialize("fmt", &request) {
+        Ok(changes) => changes,
+        Err(e) => {
+            // `CodegenTargetError` has no `Display`; unwrap the message.
+            let msg = match &e {
+                CodegenTargetError::Usage(m) | CodegenTargetError::Failed(m) => m.as_str(),
+            };
+            out.stderr.push_str(&format!("fmt: {path}: {msg}\n"));
+            return 2;
+        }
+    };
+    let store = FsStore::new(&root);
+    let engine = Engine::new(&store);
+
+    if check {
+        // `prior = None`: fmt does not own an artifact set (see module
+        // docs) — a stale manifest must not plan deletes.
+        return match engine.plan(&changes, None) {
+            Ok(plan) if plan.is_clean() => 0,
+            Ok(_) => {
+                out.stdout.push_str(&format!("{path}: not canonical\n"));
+                out.had_failure = true;
+                0
+            }
+            Err(e) => {
+                out.stderr.push_str(&format!("fmt: {path}: {e}\n"));
+                2
+            }
+        };
+    }
+
+    if write {
+        // The journaled desired-state apply — manifest + write-ahead
+        // journal under `<root>/.handl/codegen/`, drift-checked and
+        // revertable, exactly like `hnl codegen fmt --output <root>`.
+        let mut meta = RunMeta::new("fmt", env!("CARGO_PKG_VERSION"));
+        meta.new_run_id();
+        return match engine.apply(&changes, None, &meta, &ApplyOptions::default()) {
+            Ok(report) if report.clean() => 0,
+            Ok(report) => {
+                for (artifact, e) in &report.failures {
+                    out.stderr.push_str(&format!("fmt: {artifact}: {e}\n"));
+                }
+                if let Some(fatal) = &report.fatal {
+                    out.stderr.push_str(&format!("fmt: {fatal}\n"));
+                }
+                1
+            }
+            Err(e) => {
+                out.stderr
+                    .push_str(&format!("fmt: {path}: apply failed: {e}\n"));
+                1
+            }
+        };
+    }
+
+    // Default: the materialized formatted bytes to stdout — no store
+    // mutation, no journal.
+    match changes
+        .iter()
+        .find_map(|c| c.content())
+        .map(|b| String::from_utf8_lossy(b).into_owned())
+    {
+        Some(formatted) => {
+            out.stdout.push_str(&formatted);
+            0
+        }
+        None => {
+            out.stderr
+                .push_str(&format!("fmt: {path}: no formatted output\n"));
+            2
+        }
+    }
+}
+
+/// Format stdin through the `fmt` capability — the pre-PL-004 path,
+/// kept because the desired-state pipeline needs a file artifact.
+/// Returns 2 on parse/dispatch error (and sets `out.had_failure` for
+/// check failures); otherwise 0. `--write` is rejected by the caller.
+fn fmt_stdin(host: &mut DefaultHost, src: &str, check: bool, out: &mut Out) -> i32 {
     let request = CapabilityRequest {
         capability: "fmt".into(),
         payload: json!({ "source": src, "check": check }),
@@ -219,7 +368,7 @@ fn fmt_one(
     let response = match host.run(&request) {
         Ok(r) => r,
         Err(e) => {
-            out.stderr.push_str(&format!("fmt: {path}: {e}\n"));
+            out.stderr.push_str(&format!("fmt: <stdin>: {e}\n"));
             return 2;
         }
     };
@@ -227,7 +376,7 @@ fn fmt_one(
     match response.0.get("status").and_then(|v| v.as_str()) {
         Some("canonical") => 0,
         Some("not-canonical") => {
-            out.stdout.push_str(&format!("{path}: not canonical\n"));
+            out.stdout.push_str("<stdin>: not canonical\n");
             out.had_failure = true;
             0
         }
@@ -237,15 +386,7 @@ fn fmt_one(
                 .get("output")
                 .and_then(|v| v.as_str())
                 .unwrap_or_default();
-            if write {
-                if let Err(e) = write_atomic(disk, formatted) {
-                    out.stderr
-                        .push_str(&format!("fmt: failed to write {path}: {e}\n"));
-                    return 2;
-                }
-            } else {
-                out.stdout.push_str(formatted);
-            }
+            out.stdout.push_str(formatted);
             0
         }
         Some("error") => {
@@ -255,26 +396,17 @@ fn fmt_one(
                 .cloned()
                 .and_then(|v| serde_json::from_value(v).ok())
                 .unwrap_or_default();
-            out.stderr.push_str(&render_diagnostic(&diag, path));
+            out.stderr.push_str(&render_diagnostic(&diag, "<stdin>"));
             out.stderr.push('\n');
             2
         }
         other => {
             out.stderr.push_str(&format!(
-                "fmt: {path}: unexpected capability status {other:?}\n"
+                "fmt: <stdin>: unexpected capability status {other:?}\n"
             ));
             2
         }
     }
-}
-
-/// Write `content` to `target` atomically (temp file + rename).
-fn write_atomic(target: &Path, content: &str) -> std::io::Result<()> {
-    let dir = target.parent().unwrap_or_else(|| Path::new("."));
-    let tmp = dir.join(format!(".hnl-fmt-tmp-{}", std::process::id()));
-    std::fs::write(&tmp, content)?;
-    std::fs::rename(&tmp, target)?;
-    Ok(())
 }
 
 fn err(msg: impl Into<String>) -> ExtResponse {
@@ -336,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn write_rewrites_the_file() {
+    fn write_rewrites_the_file_journaled() {
         let dir = tmpdir("write");
         let file = dir.join("dirty.hnl");
         std::fs::write(&file, "x   =   1;").unwrap();
@@ -347,6 +479,16 @@ mod tests {
         );
         assert_eq!(res.code, 0, "stderr: {}", res.stderr);
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "x = 1;\n");
+        // The desired-state apply journals under `.handl/codegen/`.
+        assert!(
+            dir.join(".handl/codegen/journal").exists()
+                || dir
+                    .join(".handl/codegen")
+                    .read_dir()
+                    .is_ok_and(|mut d| d.next().is_some()),
+            "expected .handl/codegen bookkeeping under {}",
+            dir.display()
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
