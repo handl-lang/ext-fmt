@@ -444,11 +444,11 @@ mod tests {
     fn formats_a_file_to_stdout() {
         let dir = tmpdir("stdout");
         let file = dir.join("dirty.hnl");
-        std::fs::write(&file, "x   =   1;").unwrap();
+        std::fs::write(&file, "x   :=   1;").unwrap();
 
         let res = run(&[file.to_string_lossy().into_owned()], &dir);
         assert_eq!(res.code, 0, "stderr: {}", res.stderr);
-        assert_eq!(res.stdout, "x = 1;\n");
+        assert_eq!(res.stdout, "x := 1;\n");
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -456,7 +456,7 @@ mod tests {
     fn check_reports_not_canonical_with_code_1() {
         let dir = tmpdir("check");
         let file = dir.join("dirty.hnl");
-        std::fs::write(&file, "x   =   1;").unwrap();
+        std::fs::write(&file, "x   :=   1;").unwrap();
 
         let res = run(
             &["--check".into(), file.to_string_lossy().into_owned()],
@@ -471,14 +471,14 @@ mod tests {
     fn write_rewrites_the_file_journaled() {
         let dir = tmpdir("write");
         let file = dir.join("dirty.hnl");
-        std::fs::write(&file, "x   =   1;").unwrap();
+        std::fs::write(&file, "x   :=   1;").unwrap();
 
         let res = run(
             &["--write".into(), file.to_string_lossy().into_owned()],
             &dir,
         );
         assert_eq!(res.code, 0, "stderr: {}", res.stderr);
-        assert_eq!(std::fs::read_to_string(&file).unwrap(), "x = 1;\n");
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "x := 1;\n");
         // The desired-state apply journals under `.handl/codegen/`.
         assert!(
             dir.join(".handl/codegen/journal").exists()
